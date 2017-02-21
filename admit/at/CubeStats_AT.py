@@ -18,7 +18,7 @@ from admit.util import utils
 from admit.util import stats
 from admit.util.segmentfinder import ADMITSegmentFinder
 from admit.Summary import SummaryEntry
-import admit.util.casautil as casautil
+import admit.util.ratutil as casautil
 from admit.util.AdmitLogging import AdmitLogging as logging
 
 from copy import deepcopy
@@ -27,13 +27,11 @@ import numpy.ma as ma
 import math
 import os
 
-try:
-    import scipy.stats
-    import casa 
-    from taskinit import ia
-    from taskinit import rg
-except:
-    print "WARNING: No CASA; CubeStats task cannot function."
+import scipy.stats
+
+# RAT
+import astropy.units as u
+from spectral_cube import SpectralCube
 
 class CubeStats_AT(AT):
     """Compute image-plane based statistics for a cube.
@@ -119,7 +117,7 @@ class CubeStats_AT(AT):
                 "psample" : -1,         # if > 0, spatial sampling rate for PeakStats
         }
         AT.__init__(self,keys,keyval)
-        self._version       = "1.0.6"
+        self._version       = "1.2.0"
         self.set_bdp_in([(Image_BDP,      1, bt.REQUIRED)])
         self.set_bdp_out([(CubeStats_BDP, 1)])
 
@@ -187,7 +185,7 @@ class CubeStats_AT(AT):
         #   b2 = output BDP
 
         b1 = self._bdp_in[0]
-        fin = b1.getimagefile(bt.CASA)
+        fin = b1.getimagefile(bt.FITS)
 
         bdp_name = self.mkext(fin,'cst')
         b2 = CubeStats_BDP(bdp_name)
@@ -223,9 +221,10 @@ class CubeStats_AT(AT):
         #@todo think about using this instead of putting 'fin' in all the SummaryEntry
         #self._summary["casaimage"] = SummaryEntry(fin,"CubeStats_AT",self.id(True))
 
-        # extra CASA call to get the freq's in GHz, as these are not in imstat1{}
-        # @todo what if the coordinates are not in FREQ ?
-        # Note: CAS-7648 bug on 3D cubes
+        if True:
+            return
+
+        # extra "CASA" call to get the freq's in GHz, as these are not in imstat1{}
         if False:
             # csys method
             ia.open(self.dir(fin))
