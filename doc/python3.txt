@@ -1,0 +1,14 @@
+In the process of removing CASA dependencies in favor or RAT, which can also use python3 a few
+python3 specific issues were identified:
+
+1) setup.py doesn't like the octal 0755
+
+2) the various __init__.py are not py3 compatible, e.g.
+
+
+Traceback (most recent call last):
+  File "./admit0.py", line 7, in <module>
+    import admit
+  File "/home/teuben/ADMIT/admit-rat/admit/__init__.py", line 7, in <module>
+    from AT          import AT          as Task
+ImportError: No module named 'AT'
