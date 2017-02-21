@@ -9,7 +9,7 @@
 from AbstractPlot import AbstractPlot
 import os
 import PlotControl
-import casautil
+import ratutil
 
 class ImPlot(AbstractPlot):
     """
@@ -75,7 +75,7 @@ class ImPlot(AbstractPlot):
 
        if self._plot_mode != PlotControl.NOPLOT:
            #print "%s figno=%d figname=%s rasterfile=%s" % (self.__class__.__name__,self.__class__.figno,figname,rasterfile)
-           casautil.implot(rasterfile=rasterfile,figname=figname,contourfile=contourfile,plottype=self._plot_type,plotmode=self._plot_mode,colorwedge=colorwedge)
+           ratutil.implot(rasterfile=rasterfile,figname=figname,contourfile=contourfile,plottype=self._plot_type,plotmode=self._plot_mode,colorwedge=colorwedge)
 
            if thumbnail: self.makeThumbnail(self.__class__.figno)
 
