@@ -15,6 +15,9 @@ from distutils import log # needed for outputting information messages
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+NAME = 'admit'
+
+# VERSION
 def aversion():
     import admit.version
     return admit.version.__version__
@@ -33,6 +36,11 @@ class OverrideInstall(install):
                 log.info("Changing permissions of %s to %s" %  (filepath, oct(mode)))
                 os.chmod(filepath, mode)
 
+
+# setup_requires = ['numpy>=' + astropy.__minimum_numpy_version__]
+setup_requires   = []
+install_requires = []
+
 # the required stuff (the version= also should be in the Makefile, for proper labeling)
 # as for packages, 'admit/at/test' etc. is not included, so you cannot run tests
 # also 'xmlio/dtd/admit.dtd' is not found, this required another attention
@@ -41,8 +49,12 @@ setup(
     version = aversion(),
     author = "Peter Teuben",
     author_email = "teuben@gmail.com",
-    description = ("A test setup.py for ADMIT."),
-    license = "BSD",
+    description = ("A test setup.py for ADMIT-rat."),
+    license = "MIT",
+    requires=['numpy', 'scipy', 'astropy', 'spectral_cube'],
+    setup_requires=setup_requires,
+    install_requires=install_requires,
+    provides=[NAME],
     keywords = "example documentation tutorial",
     url = "http://admit.astro.umd.edu/wiki/index.php/ADMIT",
     scripts=['bin/admit','bin/casarun','bin/admit_root','bin/admit_root.py',
