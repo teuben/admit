@@ -19,14 +19,6 @@ import admit.util.utils as utils
 from admit.util.AdmitLogging import AdmitLogging as logging
 
 
-# CASA imports
-try:
-    from imsubimage import imsubimage
-    from imrebin import imrebin
-    from casa import imhead
-except:
-    print "WARNING: No CASA; LineCube task cannot function."
-
 # system imports
 import os
 import math

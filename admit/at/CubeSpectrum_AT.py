@@ -27,12 +27,6 @@ import numpy as np
 import numpy.ma as ma
 import os
 
-try:
-  import casa
-  import taskinit
-except:
-  print "WARNING: No CASA; CubeSpectrum task cannot function."
-
 class CubeSpectrum_AT(AT):
     """ Define one (or more) spectra through a cube.
 
@@ -161,7 +155,7 @@ class CubeSpectrum_AT(AT):
         # b2  = output BDP
 
         b1 = self._bdp_in[0]                                            # check input SpwCube (or LineCube)
-        fin = b1.getimagefile(bt.CASA)
+        fin = b1.getimagefile(bt.FITS)
         if self._bdp_in[0]._type == bt.LINECUBE_BDP:
             use_vel = True
         else:
@@ -192,7 +186,7 @@ class CubeSpectrum_AT(AT):
             if self._bdp_in[2]._type != bt.MOMENT_BDP:
                 raise Exception,"bdp_in[2] not a Moment_BDP, should never happen"
             b1m = self._bdp_in[2]
-            fim = b1m.getimagefile(bt.CASA)
+            fim = b1m.getimagefile(bt.FITS)
             pos1,maxval = self.maxpos_im(self.dir(fim))     # compute maxpos, since it is not in bdp (yet)
             logging.info('CubeSum::maxpos,val=%s,%f' % (str(pos1),maxval))
             pos.append(pos1[0])

@@ -17,12 +17,6 @@ from admit.util.AdmitLogging import AdmitLogging as logging
 import numpy as np
 from copy import deepcopy
 
-try:
-  import casa
-  import taskinit
-except:
-  print "WARNING: No CASA; Smooth task cannot function."
-
 class Smooth_AT(AT):
     """Creates a smoothed version of a datacube.
 

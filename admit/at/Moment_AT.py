@@ -22,14 +22,6 @@ import admit.util.casautil as casautil
 from admit.util import APlot
 from admit.util.AdmitLogging import AdmitLogging as logging
 
-# CASA imports
-try:
-    import taskinit
-    import casa
-    from makemask import makemask
-except:
-    print "WARNING: No CASA; Moment task cannot function."
-
 # system imports
 import math
 import numpy as np

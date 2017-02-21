@@ -28,12 +28,6 @@ import numpy.ma as ma
 import numpy.linalg as la
 import math
 
-try:
-  import casa
-  import taskinit
-except:
-  print "WARNING: No CASA; PVSlice task cannot function."
-
 class PVSlice_AT(AT):
     """Create a PV Slice through a cube.
 

@@ -23,16 +23,8 @@ from admit.util.AdmitLogging import AdmitLogging as logging
 
 import numpy as np
 import numpy.ma as ma
-try:
-    import scipy
-    import scipy.signal
-except:
-    print "WARNING: No scipy; PVCorr task cannot function."
-try:
-    import taskinit
-    import casa
-except:
-    print "WARNING: No CASA; PVCorr task cannot function."
+import scipy
+import scipy.signal
 
 #
 # Some discussion/code on https://github.com/keflavich/image_registration

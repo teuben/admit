@@ -27,14 +27,8 @@ from admit.bdp.Image_BDP import Image_BDP
 from admit.util.AdmitLogging import AdmitLogging as logging
 import admit.util.casautil as casautil
 
-try:
-  import scipy
-  import scipy.signal
-  import casa
-  import taskinit
-except:
-  print "WARNING: No scipy or casa; OverlapIntegral task cannot function."
-
+import scipy
+import scipy.signal
 
 class OverlapIntegral_AT(AT):
     """Compute an overlap integral between selected images (or cubes).

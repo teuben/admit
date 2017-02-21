@@ -16,11 +16,6 @@ import numpy as np
 import os as os
 from copy import deepcopy
 
-try:
-  import casa
-  import taskinit
-except:
-  print "WARNING: No CASA; Regrid task cannot function."
 
 class Regrid_AT(AT):
     """Creates a regridded version of multiple datacubes. Capable of 

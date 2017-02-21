@@ -26,11 +26,6 @@ from copy import deepcopy
 
 import types
 import os
-try:
-  import casa
-  import taskinit
-except:
-  print "WARNING: No CASA; ContinuumSub task cannot function."
 
 class ContinuumSub_AT(AT):
     """Continuum subtraction from a cube. Produces a line cube and continuum map.
@@ -134,7 +129,7 @@ class ContinuumSub_AT(AT):
         # b2  = output line cube
         # b3  = output cont map
         b1 = self._bdp_in[0]
-        f1 = b1.getimagefile(bt.CASA)
+        f1 = b1.getimagefile(bt.FITS)
 
         b1a = self._bdp_in[1]
         # b1b = self._bdp_in[2]      
@@ -149,74 +144,6 @@ class ContinuumSub_AT(AT):
         self.addoutput(b2)
         self.addoutput(b3)
 
-        taskinit.ia.open(self.dir(f1))
-        s = taskinit.ia.summary()
-        nchan = s['shape'][2]                # ingest has guarenteed this to the spectral axis
-                        
-        if b1a != None:                      # if a LineList was given, use that
-            if len(b1a.table) > 0:
-                # this section of code actually works for len(ch0)==0 as well
-                #
-                ch0 = b1a.table.getFullColumnByName("startchan")
-                ch1 = b1a.table.getFullColumnByName("endchan")
-                if pad != 0:                 # can widen or narrow the segments
-                    if pad > 0:
-                        logging.info("pad=%d to widen the segments" % pad)
-                    else:
-                        logging.info("pad=%d to narrow the segments" % pad)
-                    ch0 = np.where(ch0-pad <  0,     0,       ch0-pad)
-                    ch1 = np.where(ch1+pad >= nchan, nchan-1, ch1+pad)
-                s = Segments(ch0,ch1,nchan=nchan)
-                ch = s.getchannels(True)     # take the complement of lines as the continuum
-            else:
-                ch = range(nchan)            # no lines?  take everything as continuum (probably bad)
-                logging.warning("All channels taken as continuum. Are you sure?")
-        elif len(contsub) > 0:               # else if contsub[] was supplied manually
-            s = Segments(contsub,nchan=nchan)
-            ch = s.getchannels()
-        else:
-            raise Exception,"No contsub= or input LineList given"
-            
-        if len(ch) > 0:
-            taskinit.ia.open(self.dir(f1))
-            taskinit.ia.continuumsub(outline=self.dir(f2),outcont=self.dir(f3a),channels=ch,fitorder=fitorder)
-            taskinit.ia.close()
-            dt.tag("continuumsub")
-            casa.immoments(self.dir(f3a),-1,outfile=self.dir(f3))      # mean of the continuum cube (f3a)
-            utils.remove(self.dir(f3a))                                # is the continuum map (f3)
-            dt.tag("immoments")
-            if b1b != None:
-                # this option is now deprecated (see above, by setting b1b = None), no user option allowed
-                # there is likely a mis-match in the beam, given how they are produced. So it's safer to
-                # remove this here, and force the flow to smooth manually
-                print "Adding back in a continuum map"
-                f1b = b1b.getimagefile(bt.CASA)
-                f1c = self.mkext(f1,'sum')
-                # @todo   notice we are not checking for conforming mapsize and WCS
-                #         and let CASA fail out if we've been bad.
-                casa.immath([self.dir(f3),self.dir(f1b)],'evalexpr',self.dir(f1c),'IM0+IM1')
-                utils.rename(self.dir(f1c),self.dir(f3))
-                dt.tag("immath")
-        else:
-            raise Exception,"No channels left to determine continuum. pad=%d too large?" % pad
-
-        # regression
-        rdata = casautil.getdata(self.dir(f3)).data
-        logging.regression("CSUB: %f %f" % (rdata.min(),rdata.max()))
-
-        # Create two output images for html and their thumbnails, too
-        implot = ImPlot(ptype=self._plot_type,pmode=self._plot_mode,abspath=self.dir())
-        implot.plotter(rasterfile=f3,figname=f3,colorwedge=True)
-        figname   = implot.getFigure(figno=implot.figno,relative=True)
-        thumbname = implot.getThumbnail(figno=implot.figno,relative=True)
-        b2.setkey("image", Image(images={bt.CASA:f2}))
-        b3.setkey("image", Image(images={bt.CASA:f3, bt.PNG : figname}))
-        dt.tag("implot")
-
-        if len(ch) > 0:
-          taskargs = "pad=%d fitorder=%d contsub=%s" % (pad,fitorder,str(contsub))
-          imcaption = "Continuum map"
-          self._summary["continuumsub"] = SummaryEntry([figname,thumbname,imcaption],"ContinuumSub_AT",self.id(True),taskargs)
           
         dt.tag("done")
         dt.end()

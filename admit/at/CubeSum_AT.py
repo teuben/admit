@@ -27,11 +27,6 @@ from copy import deepcopy
 
 import types
 import os
-try:
-  import casa
-  import taskinit
-except:
-  print "WARNING: No CASA; CubeSum task cannot function."
 
 class CubeSum_AT(AT):
     """Creates a moment-0 map of a cube, with optional channel segment selection.
@@ -183,7 +178,7 @@ class CubeSum_AT(AT):
         b1a = self._bdp_in[1]                    # cubestats (optional)
         b1b = self._bdp_in[2]                    # linelist  (optional)
 
-        f1 =  b1.getimagefile(bt.CASA)
+        f1 =  b1.getimagefile(bt.FITS)
         taskinit.ia.open(self.dir(f1))
         s = taskinit.ia.summary()
         nchan = s['shape'][2]

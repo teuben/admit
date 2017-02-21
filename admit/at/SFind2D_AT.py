@@ -24,11 +24,6 @@ import numpy.ma as ma
 from copy import deepcopy
 
 import types
-try:
-    import casa
-    import taskinit
-except:
-    print "WARNING: No CASA; SFind2D task cannot function."
 
 class SFind2D_AT(AT):
     """
