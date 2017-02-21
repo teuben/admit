@@ -10,11 +10,7 @@ import numpy
 import numpy.ma as ma
 
 
-try:
-  import casa
-  import taskinit
-except:
-  print "WARNING: No CASA; casautil can't function"
+print "WARNING: No CASA; casautil can't function"
 
 import PlotControl
 
