@@ -25,7 +25,7 @@ import admit.util.ImPlot as ImPlot
 import admit.util.Table
 from admit.bdp.Image_BDP import Image_BDP
 from admit.util.AdmitLogging import AdmitLogging as logging
-import admit.util.casautil as casautil
+import admit.util.ratutil as casautil
 
 import scipy
 import scipy.signal

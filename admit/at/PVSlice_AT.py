@@ -19,7 +19,7 @@ from admit.util import APlot
 from admit.util import utils
 from admit.util import stats
 import admit.util.ImPlot as ImPlot
-import admit.util.casautil as casautil
+import admit.util.ratutil as casautil
 from admit.util.AdmitLogging import AdmitLogging as logging
 
 from copy import deepcopy

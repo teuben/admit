@@ -8,7 +8,6 @@
 from admit.AT import AT
 from admit.Summary import SummaryEntry
 import admit.util.bdp_types as bt
-import admit.util.casautil as casautil
 import admit.util.Image as Image
 import admit.util.Line as Line
 import admit.util.ImPlot as ImPlot

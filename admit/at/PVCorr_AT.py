@@ -13,7 +13,7 @@ import admit.util.bdp_types as bt
 from admit.util.Image import Image
 from admit.util.Table import Table
 import admit.util.utils as utils
-import admit.util.casautil as casautil
+import admit.util.ratutil as casautil
 from admit.bdp.CubeStats_BDP import CubeStats_BDP
 from admit.bdp.PVCorr_BDP import PVCorr_BDP
 from admit.bdp.Image_BDP import Image_BDP

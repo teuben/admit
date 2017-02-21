@@ -18,7 +18,7 @@ import admit.util.Image as Image
 import admit.util.Line as Line
 import admit.util.ImPlot as ImPlot
 import admit.util.utils as utils
-import admit.util.casautil as casautil
+import admit.util.ratutil as casautil
 from admit.util import APlot
 from admit.util.AdmitLogging import AdmitLogging as logging
 
