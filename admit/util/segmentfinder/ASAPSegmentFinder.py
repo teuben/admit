@@ -33,12 +33,9 @@ import math
 import numpy.ma as ma
 
 # Fake linefinder for Sphinx.
-try:
-    import asap
-    from taskinit import tb
-    from asap.asaplinefind import linefinder
-except:
-    print "WARNING: No ASAP; ASAPLineFinder cannot function."
+# disable for RAT
+if True:
+    # print "WARNING: No ASAP; ASAPLineFinder cannot function."
     class linefinder(object):
         def __init__(self):
             pass
