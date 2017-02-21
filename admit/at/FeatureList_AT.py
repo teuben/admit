@@ -15,11 +15,6 @@ from admit.bdp.CubeStats_BDP import CubeStats_BDP
 from admit.bdp.Image_BDP import Image_BDP
 
 import numpy as np
-try:
-  import taskinit
-  import casa
-except:
-  print "WARNING: No CASA; FeatureList task cannot function."
 
 class FeatureList_AT(AT):
     """Find features in a map.

@@ -25,11 +25,6 @@ from copy import deepcopy
 
 import types
 import os
-try:
-  import casa
-  import taskinit
-except:
-  print "WARNING: No CASA; Export task cannot function."
 
 class Export_AT(AT):
     """Creates a FITS file from an image BDP.
@@ -106,7 +101,7 @@ class Export_AT(AT):
         
  
         b1  = self._bdp_in[0]                      # image/cube
-        infile = b1.getimagefile(bt.CASA)          # ADMIT filename of the image (cube)
+        infile = b1.getimagefile(bt.FITS)          # ADMIT filename of the image (cube)
 
         if len(basename) == 0:
             fitsname = self.mkext(infile,'fits')   # morph to the new output name with replaced extension '
