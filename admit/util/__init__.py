@@ -8,7 +8,8 @@ import AdmitHTTP
 import PlotControl
 import Splatalogue
 import bdp_types
-import casautil
+# import casautil
+import ratutil
 import specutil
 import stats
 import utils 
