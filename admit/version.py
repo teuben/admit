@@ -1,4 +1,5 @@
-__version__ = '1.0.4'
+#  define the version (and update $ADMIT/VERSIONS) 
+__version__ = '1.2.0'
 
 def version():
   print __version__

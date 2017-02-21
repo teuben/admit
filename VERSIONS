@@ -3,3 +3,4 @@
 1.0.2   Conversion to git (github/astroumd/admit)
 1.0.3   Adding stale flag (branchname: stale)
 1.0.4   Stale added back on master
+1.2.0   Alternate branch (rat) to use Radio Astro Tools instead of CASA
