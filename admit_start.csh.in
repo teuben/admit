@@ -1,7 +1,7 @@
 # @EDIT_MSG@
 # for (t)csh: source this file
 
-setenv ADMIT @ADMIT@
+setenv ADMIT     @ADMIT@
 setenv CASA_ROOT @CASA_ROOT@
 
 if ( "x$CASA_ROOT" == "x" ) then
@@ -24,7 +24,7 @@ endif
 rehash
 
 #  fake a path, some code depends on it 
-if ($?CASAPATH == 0) then
+if ($?CASAPATH == 0 && $?CASA_ROOT) then
   setenv CASAPATH "$CASA_ROOT linux admit `hostname`"
 endif
 
