@@ -31,6 +31,7 @@ import scipy.stats
 
 # RAT
 import astropy.units as u
+import astropy.stats as astats
 from spectral_cube import SpectralCube
 
 class CubeStats_AT(AT):
@@ -158,6 +159,41 @@ class CubeStats_AT(AT):
         else:
             return {}
 
+    def _imstat(self, cube, planes = False):
+        print "IMSTAT"
+        # minpos
+        # maxpos
+        s = {}
+        if planes:
+            data = cube.unmasked_data[:,:,:].value            
+            (nz,ny,nx) = data.shape
+            s['min']  = np.zeros(nz)
+            s['max']  = np.zeros(nz)
+            s['mean'] = np.zeros(nz)
+            s['rms']  = np.zeros(nz)
+            s['mad']  = np.zeros(nz)
+            s['minpos']  = np.zeros(nz)            
+            s['maxpos']  = np.zeros(nz)            
+            for i in range(nz):
+                data = cube.unmasked_data[i,:,:].value
+                s['min'][i]   = data.min()
+                s['max'][i]   = data.max()
+                s['mean'][i]  = data.mean()
+                s['rms'][i]   = data.std()
+                s['mad'][i]   = astats.mad_std(data)
+        else:
+            data = cube.unmasked_data[:,:,:].value
+            s['min']  = data.min()
+            s['max']  = data.max()
+            s['mean'] = data.mean()
+            s['rms']  = data.std()
+            s['mad']  = astats.mad_std(data)
+            s['minpos']  = [0,0,0]
+            s['maxpos']  = [0,0,0]
+
+        return s   
+            
+
     def run(self):
         """Runs the task.
 
@@ -213,7 +249,8 @@ class CubeStats_AT(AT):
         nrargs = len(rargs)
 
         if nrargs == 0:
-           sumrargs = "medabsdevmed"      # for the summary, indicate the default robust
+           sumrargs = "medabsdevmed"      # for the summary, indicate the default robust (CASA)
+           sumrargs = "mad"               # for the summary, indicate the default robust (RAT)
         else:
            sumrargs = str(rargs)
 
@@ -221,49 +258,33 @@ class CubeStats_AT(AT):
         #@todo think about using this instead of putting 'fin' in all the SummaryEntry
         #self._summary["casaimage"] = SummaryEntry(fin,"CubeStats_AT",self.id(True))
 
-        if True:
-            return
+        cube1 = SpectralCube.read(self.dir(fin))
+        cube2 = cube1.with_spectral_unit(u.km / u.s, velocity_convention='radio')
 
-        # extra "CASA" call to get the freq's in GHz, as these are not in imstat1{}
-        if False:
-            # csys method
-            ia.open(self.dir(fin))
-            csys = ia.coordsys() 
-            spec_axis = csys.findaxisbyname("spectral") 
-            # ieck, we need a valid position, or else it will come back and "Exception: All selected pixels are masked"
-            #freqs = ia.getprofile(spec_axis, region=rg.box([0,0],[0,0]))['coords']/1e9
-            #freqs = ia.getprofile(spec_axis)['coords']/1e9
-            freqs = ia.getprofile(spec_axis,unit="GHz")['coords']
-            dt.tag("getprofile")
-        else:
-            # old imval method 
-            #imval0 = casa.imval(self.dir(fin),box='0,0,0,0')     # this fails on 3D
-            imval0 = casa.imval(self.dir(fin))
-            freqs = imval0['coords'].transpose()[2]/1e9
-            dt.tag("imval")
+        freqs = cube1.spectral_axis.to("GHz").value
+        vels  = cube2.spectral_axis.value
+
         nchan = len(freqs)
         chans = np.arange(nchan)
 
-        # call CASA to get what we want
         # imstat0 is the whole cube, imstat1 the plane based statistics
         # warning: certain robust stats (**rargs) on the whole cube are going to be very slow
         dt.tag("start")
-        imstat0 = casa.imstat(self.dir(fin),           logfile=self.dir('imstat0.logfile'),append=False,**rargs)
+        imstat0 = self._imstat(cube1, planes=False)
         dt.tag("imstat0")
-        imstat1 = casa.imstat(self.dir(fin),axes=[0,1],logfile=self.dir('imstat1.logfile'),append=False,**rargs)
+        imstat1 = self._imstat(cube1, planes=True)
         dt.tag("imstat1")
-        # imm = casa.immoments(self.dir(fin),axis='spec', moments=8, outfile=self.dir('ppp.im'))
         if nrargs > 0:
             # need to get the peaks without rubust
-            imstat10 = casa.imstat(self.dir(fin),           logfile=self.dir('imstat0.logfile'),append=True)
+            imstat10 = casa.imstat(cube1, planes=False)
             dt.tag("imstat10")
-            imstat11 = casa.imstat(self.dir(fin),axes=[0,1],logfile=self.dir('imstat1.logfile'),append=True)
+            imstat11 = casa.imstat(cube1, planes=True)
             dt.tag("imstat11")
 
         # grab the relevant plane-based things from imstat1
         if nrargs == 0:
             mean    = imstat1["mean"]
-            sigma   = imstat1["medabsdevmed"]*1.4826     # see also: astropy.stats.median_absolute_deviation()
+            sigma   = imstat1["mad"]
             peakval = imstat1["max"]
             minval  = imstat1["min"]
         else:
@@ -271,12 +292,6 @@ class CubeStats_AT(AT):
             sigma   = imstat1["rms"]
             peakval = imstat11["max"]
             minval  = imstat11["min"]
-
-        if True:
-            # work around a bug in imstat(axes=[0,1]) for last channel [CAS-7697]
-            for i in range(len(sigma)):
-                if sigma[i] == 0.0:
-                    minval[i] = peakval[i] = 0.0
 
         # too many variations in the RMS ?
         sigma_pos = sigma[np.where(sigma>0)]
@@ -299,10 +314,9 @@ class CubeStats_AT(AT):
             ypos    = np.zeros(nchan)
             peaksum = np.zeros(nchan)
 
-            ia.open(self.dir(fin))
             for i in range(nchan):
                 if sigma[i] > 0.0:
-                    plane = ia.getchunk(blc=[0,0,i,-1],trc=[-1,-1,i,-1],dropdeg=True)
+                    plane = cube1.unmasked_data[i,:,:].value
                     v = ma.masked_invalid(plane)
                     v_abs = np.absolute(v)
                     max = np.unravel_index(v_abs.argmax(), v_abs.shape)
@@ -311,7 +325,6 @@ class CubeStats_AT(AT):
                     if numsigma > 0.0:
                         peaksum[i] = ma.masked_less(v,numsigma * sigma[i]).sum()
             peaksum = np.nan_to_num(peaksum)    # put 0's where nan's are found
-            ia.close()
             dt.tag("ppp")
 
         nzeros = len(np.where(sigma<=0.0))
@@ -336,33 +349,33 @@ class CubeStats_AT(AT):
 
         # get the full cube statistics, it depends if robust was pre-selected
         if nrargs == 0:
-            mean0  = imstat0["mean"][0]
-            sigma0 = imstat0["medabsdevmed"][0]*1.4826
-            peak0  = imstat0["max"][0]
+            mean0  = imstat0["mean"]
+            sigma0 = imstat0["mad"]
+            peak0  = imstat0["max"]
             b2.setkey("mean" , float(mean0))
             b2.setkey("sigma", float(sigma0))
-            b2.setkey("minval",float(imstat0["min"][0]))
-            b2.setkey("maxval",float(imstat0["max"][0]))
-            b2.setkey("minpos",imstat0["minpos"][:3].tolist())     #? [] or array(..dtype=int32) ??
-            b2.setkey("maxpos",imstat0["maxpos"][:3].tolist())     #? [] or array(..dtype=int32) ??
-            logging.info("CubeMax: %f @ %s" % (imstat0["max"][0],str(imstat0["maxpos"])))
-            logging.info("CubeMin: %f @ %s" % (imstat0["min"][0],str(imstat0["minpos"])))
+            b2.setkey("minval",float(imstat0["min"]))
+            b2.setkey("maxval",float(imstat0["max"]))
+            b2.setkey("minpos",imstat0["minpos"][:3]) 
+            b2.setkey("maxpos",imstat0["maxpos"][:3]) 
+            logging.info("CubeMax: %f @ %s" % (imstat0["max"],str(imstat0["maxpos"])))
+            logging.info("CubeMin: %f @ %s" % (imstat0["min"],str(imstat0["minpos"])))
             logging.info("CubeRMS: %f" % sigma0)
         else:
-            mean0  = imstat0["mean"][0]
-            sigma0 = imstat0["rms"][0]
-            peak0  = imstat10["max"][0]
+            mean0  = imstat0["mean"]
+            sigma0 = imstat0["rms"]
+            peak0  = imstat10["max"]
             b2.setkey("mean" , float(mean0))
             b2.setkey("sigma", float(sigma0))
-            b2.setkey("minval",float(imstat10["min"][0]))
-            b2.setkey("maxval",float(imstat10["max"][0]))
-            b2.setkey("minpos",imstat10["minpos"][:3].tolist())     #? [] or array(..dtype=int32) ??
-            b2.setkey("maxpos",imstat10["maxpos"][:3].tolist())     #? [] or array(..dtype=int32) ??
-            logging.info("CubeMax: %f @ %s" % (imstat10["max"][0],str(imstat10["maxpos"])))
-            logging.info("CubeMin: %f @ %s" % (imstat10["min"][0],str(imstat10["minpos"])))
+            b2.setkey("minval",float(imstat10["min"]))
+            b2.setkey("maxval",float(imstat10["max"]))
+            b2.setkey("minpos",imstat10["minpos"][:3])
+            b2.setkey("maxpos",imstat10["maxpos"][:3])
+            logging.info("CubeMax: %f @ %s" % (imstat10["max"],str(imstat10["maxpos"])))
+            logging.info("CubeMin: %f @ %s" % (imstat10["min"],str(imstat10["minpos"])))
             logging.info("CubeRMS: %f" % sigma0)
         b2.setkey("robust",robust)
-        rms_ratio = imstat0["rms"][0]/sigma0
+        rms_ratio = imstat0["rms"]/sigma0
         logging.info("RMS Sanity check %f" % rms_ratio)
         if rms_ratio > 1.5:
             logging.warning("RMS sanity check = %f.  Either bad sidelobes, lotsa signal, or both" % rms_ratio)
@@ -412,15 +425,8 @@ class CubeStats_AT(AT):
                 table2.exportTable(self.dir("testCubeStats.tab"))
                 del table2
 
-            # the "box" for the "spectrum" is all pixels.  Don't know how to 
-            # get this except via shape.
-            ia.open(self.dir(fin))
-            s = ia.summary()
-            ia.close()
-            if 'shape' in s:
-                specbox = (0,0,s['shape'][0],s['shape'][1])
-            else:
-                specbox = ()
+            (nz,ny,nx) = cube1.shape
+            specbox = (0,0,nx,ny)
 
             caption = "Emission characteristics as a function of channel, as derived by CubeStats_AT "
             caption += "(cyan: global rms,"
@@ -429,13 +435,8 @@ class CubeStats_AT(AT):
             caption += " red: peak/noise per channel)."
             self._summary["spectra"] = SummaryEntry([0, 0, str(specbox), 'Channel', imfile, thumbfile , caption, fin], "CubeStats_AT", self.id(True))
             self._summary["chanrms"] = SummaryEntry([float(sigma0), fin], "CubeStats_AT", self.id(True))
-
-            # @todo Will imstat["max"][0] always be equal to s['datamax']?  If not, why not?
-            if 'datamax' in s:
-                self._summary["dynrange"] = SummaryEntry([float(s['datamax']/sigma0), fin], "CubeStats_AT", self.id(True))
-            else:
-                self._summary["dynrange"] = SummaryEntry([float(imstat0["max"][0]/sigma0), fin], "CubeStats_AT", self.id(True))
-            self._summary["datamean"] = SummaryEntry([imstat0["mean"][0], fin], "CubeStats_AT", self.id(True))
+            self._summary["dynrange"] = SummaryEntry([float(imstat0["max"]/sigma0), fin], "CubeStats_AT", self.id(True))
+            self._summary["datamean"] = SummaryEntry([imstat0["mean"], fin], "CubeStats_AT", self.id(True))
 
             title = bdp_name + "_1"
             xlab =  'log(Peak,Noise,P/N)'
