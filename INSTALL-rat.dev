@@ -163,5 +163,29 @@ uses) to trigger error messages if you use a sphinx not built with casa's
 python.   YMMV.
 
 
-Some notes on CASA installations
+N6503 Test case (test6503.fits):
 ================================
+
+#!/usr/bin/env casarun
+#---------------------------------------------------------------------------------------
+import admit
+loglevel = 10            # 10=DEBUG, 15=TIMING 20=INFO 30=WARNING 40=ERROR 50=FATAL
+
+p   = admit.Project('test6503.admit', loglevel=loglevel)
+t0  = p.addtask(admit.Ingest_AT(alias='x', file='test6503.fits'))    
+t1  = p.addtask(admit.CubeStats_AT(ppp=True), ['x'])
+p.run()
+#---------------------------------------------------------------------------------------
+
+CASA::
+TIMING : Ingest END [ 1.516961    2.07917786]
+TIMING : CubeStats END [ 5.605253    5.72041416]
+TIMING : ADMITrun END [ 7.409753    8.18327498]
+REGRESSION : CST: 0.000594 1.248745
+
+RAT::
+TIMING : Ingest END [ 0.012393    0.01637793]
+TIMING : CubeStats END [ 5.53455     5.54279399]
+TIMING : ADMITrun END [ 5.660818    5.72585487]
+REGRESSION : CST: 0.000594 1.246197
+
