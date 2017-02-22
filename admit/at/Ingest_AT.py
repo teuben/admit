@@ -306,23 +306,24 @@ class Ingest_AT(AT):
         if fitsfile[0] != os.sep:
             raise Exception,"Bad file=%s, expected absolute name",fitsfile
 
-        loc = fitsfile.rfind(os.sep)               # find the '/'
+        loc = fitsfile.rfind(os.sep)               # find the last '/'
         ffile0 = fitsfile[loc+1:]                  # basename.fits
         basename = self.getkey('basename')         # (new) basename allowed (allow no dots?)
         if len(basename) == 0:
             basename = ffile0[:ffile0.rfind('.')]  # basename
         logging.info("basename=%s" % basename)
         target = self.dir(ffile0)
+        bdpfile = self.mkext(basename,"fits")
+        #print 'target',target
+        #print 'bdpfile',bdpfile
 
         if not os.path.exists(target) :
-            cmd = 'ln -s "%s" "%s"' % (fitsfile, target)
+            #cmd = 'ln -s "%s" "%s"' % (fitsfile, target)
+            cmd = 'ln -s "%s" "%s"' % (fitsfile, self.dir(bdpfile))
             logging.debug("CMD: %s" % cmd)
             os.system(cmd)
 
 
-
-
-        bdpfile = self.mkext(basename,"fits")
         if bdpfile == basename:
             raise Exception,"basename and bdpfile are the same, Ingest_AT needs a fix for this"
         b1  = SpwCube_BDP(bdpfile)
