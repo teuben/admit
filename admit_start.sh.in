@@ -3,6 +3,7 @@
 
 export  ADMIT=@ADMIT@
 export  CASA_ROOT=@CASA_ROOT@
+
 if test "x$CASA_ROOT" = "x"; then
     unset CASA_ROOT
     export PATH=${ADMIT}/bin:${PATH}
@@ -14,6 +15,13 @@ else
     export LD_LIBRARY_PATH=${CASA_ROOT}/lib:${LD_LIBRARY_PATH}
 fi
 
-export CASA_PATH="$CASA_ROOT linux admit `hostname`"
+if test "x$CASA_ROOT" != "x"; then
+  export CASA_PATH="$CASA_ROOT linux admit `hostname`"
+fi  
 
-export PYTHONPATH=${ADMIT}:${PYTHONPATH}
+
+if test "x$PYTHONPATH" = "x"; then
+    export PYTHONPATH=${ADMIT}
+else
+    export PYTHONPATH=${ADMIT}:${PYTHONPATH}
+fi    
