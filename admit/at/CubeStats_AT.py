@@ -118,7 +118,7 @@ class CubeStats_AT(AT):
                 "psample" : -1,         # if > 0, spatial sampling rate for PeakStats
         }
         AT.__init__(self,keys,keyval)
-        self._version       = "1.2.0"
+        self._version       = "1.2.1"
         self.set_bdp_in([(Image_BDP,      1, bt.REQUIRED)])
         self.set_bdp_out([(CubeStats_BDP, 1)])
 
@@ -258,10 +258,11 @@ class CubeStats_AT(AT):
         #@todo think about using this instead of putting 'fin' in all the SummaryEntry
         #self._summary["casaimage"] = SummaryEntry(fin,"CubeStats_AT",self.id(True))
 
-        cube1 = SpectralCube.read(self.dir(fin))
-        cube2 = cube1.with_spectral_unit(u.km / u.s, velocity_convention='radio')
+        cube = SpectralCube.read(self.dir(fin))
+        cube1 = cube.with_spectral_unit(u.GHz,      velocity_convention='radio')
+        cube2 = cube.with_spectral_unit(u.km / u.s, velocity_convention='radio')
 
-        freqs = cube1.spectral_axis.to("GHz").value
+        freqs = cube1.spectral_axis.value
         vels  = cube2.spectral_axis.value
 
         nchan = len(freqs)
@@ -270,15 +271,15 @@ class CubeStats_AT(AT):
         # imstat0 is the whole cube, imstat1 the plane based statistics
         # warning: certain robust stats (**rargs) on the whole cube are going to be very slow
         dt.tag("start")
-        imstat0 = self._imstat(cube1, planes=False)
+        imstat0 = self._imstat(cube, planes=False)
         dt.tag("imstat0")
-        imstat1 = self._imstat(cube1, planes=True)
+        imstat1 = self._imstat(cube, planes=True)
         dt.tag("imstat1")
         if nrargs > 0:
             # need to get the peaks without rubust
-            imstat10 = casa.imstat(cube1, planes=False)
+            imstat10 = casa.imstat(cube, planes=False)
             dt.tag("imstat10")
-            imstat11 = casa.imstat(cube1, planes=True)
+            imstat11 = casa.imstat(cube, planes=True)
             dt.tag("imstat11")
 
         # grab the relevant plane-based things from imstat1
@@ -316,7 +317,7 @@ class CubeStats_AT(AT):
 
             for i in range(nchan):
                 if sigma[i] > 0.0:
-                    plane = cube1.unmasked_data[i,:,:].value
+                    plane = cube.unmasked_data[i,:,:].value
                     v = ma.masked_invalid(plane)
                     v_abs = np.absolute(v)
                     max = np.unravel_index(v_abs.argmax(), v_abs.shape)
@@ -425,7 +426,7 @@ class CubeStats_AT(AT):
                 table2.exportTable(self.dir("testCubeStats.tab"))
                 del table2
 
-            (nz,ny,nx) = cube1.shape
+            (nz,ny,nx) = cube.shape
             specbox = (0,0,nx,ny)
 
             caption = "Emission characteristics as a function of channel, as derived by CubeStats_AT "
