@@ -58,7 +58,11 @@ def implot(rasterfile, figname, contourfile=None, plottype=PlotControl.PNG, plot
     #xlab=NONE,ylab=NONE 
 
     #can't support this until imview out= is fixed! (see below)
-    #orientation=PlotControl.LANDSCAPE 
+    #orientation=PlotControl.LANDSCAPE
+
+    if True:
+        print "IMPLOT: not implemented in RAT"
+        return
 
 
     if plotmode == PlotControl.NOPLOT:  return
