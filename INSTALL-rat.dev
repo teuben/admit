@@ -22,7 +22,13 @@ A few simple tests:
   make python1   	    (needs CASA in the environment) - can hang on a mac?  try 'make python2'
 
 This last test is important, it will verify if you have properly
-integrated RAT in your shell. 
+integrated RAT in your shell.
+
+Miniconda example:
+    wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
+    bash Miniconda2-latest-Linux-x86_64.sh
+    export PATH=$HOME/miniconda2/bin:$PATH
+    conda install ipython numpy scipy matplotlib notebook astropy
 
 
 
@@ -30,10 +36,9 @@ RAT requirements:
     Without RAT (radio astro tools) you can currently do very little with ADMIT. 
     See http://radio-astro-tools.github.io/
 
-    pip install spectral-cube
+    pip install astropy  aplpy  spectral-cube
 
-    the other modules (signal-id, radio_beam, pvextractor)
-
+    the other modules have to be done manually:
 
     pip install https://github.com/radio-astro-tools/radio_beam/archive/master.zip
     pip install https://github.com/radio-astro-tools/signal-id/archive/master.zip
@@ -94,11 +99,12 @@ Sample installation
 
 # 
 
-git clone ....
+git clone https://github.com/teuben/admit.git
 cd admit
+git checkout rat
 autoconfig
-./configure --with-casa-root=/astromake/opt/casa/stable
-source admit_start.csh
+./configure 
+source admit_start.csh   (or the .sh variant)
 
 # unit tests (these are pure python tests, and not essential for ALMA)
 make unit0
