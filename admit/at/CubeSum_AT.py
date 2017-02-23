@@ -259,6 +259,14 @@ class CubeSum_AT(AT):
         moment_0.write(image_out)
         dt.tag("immoments")
 
+        try:
+            import aplpy
+            f = aplpy.FITSFigure(moment_0.hdu)
+            f.show_colorscale()
+            f.save(image_out + ".png")
+        except:
+            print "APLPY not present"
+
         if False:
         # get the flux
             taskinit.ia.open(image_out)
