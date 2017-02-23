@@ -28,6 +28,12 @@ from copy import deepcopy
 import types
 import os
 
+# RAT
+import astropy.units as u
+import astropy.stats as astats
+from spectral_cube import SpectralCube
+
+
 class CubeSum_AT(AT):
     """Creates a moment-0 map of a cube, with optional channel segment selection.
 
@@ -179,9 +185,12 @@ class CubeSum_AT(AT):
         b1b = self._bdp_in[2]                    # linelist  (optional)
 
         f1 =  b1.getimagefile(bt.FITS)
-        taskinit.ia.open(self.dir(f1))
-        s = taskinit.ia.summary()
-        nchan = s['shape'][2]
+
+        cube = SpectralCube.read(self.dir(f1))
+        cube2 = cube.with_spectral_unit(u.km / u.s, velocity_convention='radio')
+        print(cube2)
+        nchan = cube.shape[0]
+        print 'NCHAN:',nchan
 
         if b1b != None:
             ch0 = b1b.table.getFullColumnByName("startchan")
@@ -226,8 +235,8 @@ class CubeSum_AT(AT):
         else:
             logging.info("Using varying sigma per plane")
 
-        infile = b1.getimagefile(bt.CASA)          # ADMIT filename of the image (cube)
-        bdp_name = self.mkext(infile,'csm')        # morph to the new output name with replaced extension 'csm'
+        infile = b1.getimagefile(bt.FITS)          # ADMIT filename of the image (cube)
+        bdp_name = self.mkext(infile,'csm.fits')   # morph to the new output name with replaced extension 'csm'
         image_out = self.dir(bdp_name)             # absolute filename
         
         args = {"imagename" : self.dir(infile)}    # assemble arguments for immoments()
@@ -236,104 +245,46 @@ class CubeSum_AT(AT):
 
         dt.tag("start")
 
+        # mask out [-numsigma*sigma, numsigma*sigma]        # single global sigma
+
         if sig_const:
             args["excludepix"] = [-numsigma*sigma, numsigma*sigma]        # single global sigma
             if b1b != None:
                 # print "PJT: ",chans
                 args["chans"] = chans
+            moment_0 = cube2.moment(order=0)
         else:
-            # @todo    in this section bad channels can cause a fully masked cubesum = bad
-            # cubestats input
-            sigma_array = b1a.table.getColumnByName("sigma")              # channel dependent sigma
-            sigma_pos = sigma_array[np.where(sigma_array>0)]
-            smin = sigma_pos.min()
-            smax = sigma_pos.max()
-            logging.info("sigma varies from %f to %f" % (smin,smax))
-            maxval = b1a.get("maxval")                                    # max in cube
-            nzeros = len(np.where(sigma_array<=0.0)[0])                   # check bad channels
-            if nzeros > 0:
-                logging.warning("There are %d NaN channels " % nzeros)
-                # raise Exception,"need to recode CubeSum or use constant sigma" 
-            dt.tag("grab_sig")
+            raise Exception,"Non-constant sigma not supported in RAT mode"
 
-            if len(smooth) > 0:
-                # see also LineID and others
-                filter = Filter1D.Filter1D(sigma_array,smooth[0],**Filter1D.Filter1D.convertargs(smooth))
-                sigma_array = filter.run()
-                dt.tag("smooth_sig")
-            # create a CASA image copy for making the mirror sigma cube to mask against
-            file = self.dir(infile)
-            mask = file+"_mask"
-            taskinit.ia.fromimage(infile=file, outfile=mask)
-            nx = taskinit.ia.shape()[0]
-            ny = taskinit.ia.shape()[1]
-            nchan = taskinit.ia.shape()[2]
-            taskinit.ia.fromshape(shape=[nx,ny,1])
-            plane = taskinit.ia.getchunk([0,0,0],[-1,-1,0])     # convenience plane for masking operation
-            dt.tag("mask_sig")
-
-            taskinit.ia.open(mask) 
-            dt.tag("open_mask")
-              
-            count = 0
-            for i in range(nchan):
-                if sigma_array[i] > 0:
-                    if b1b != None:
-                        if msum[i]:
-                            taskinit.ia.putchunk(plane*0+sigma_array[i],blc=[0,0,i,-1])
-                            count = count + 1
-                        else:
-                            taskinit.ia.putchunk(plane*0+maxval,blc=[0,0,i,-1])                            
-                    else:
-                        taskinit.ia.putchunk(plane*0+sigma_array[i],blc=[0,0,i,-1])
-                        count = count + 1
-                else:
-                    taskinit.ia.putchunk(plane*0+maxval,blc=[0,0,i,-1])
-            taskinit.ia.close()
-            logging.info("%d/%d channels used for CubeSum" % (count,nchan))
-            dt.tag("close_mask")
-
-            names = [file, mask]
-            tmp = file + '.tmp'
-            if numsigma == 0.0:
-                # hopefully this will also make use of the mask
-                exp = "IM0[IM1<%f]" % (0.99*maxval)
-            else:
-                exp = "IM0[abs(IM0/IM1)>%f]" % (numsigma)
-            # print "PJT: exp",exp
-            casa.immath(mode='evalexpr', imagename=names, expr=exp, outfile=tmp) 
-            args["imagename"] = tmp
-            dt.tag("immath")
-
-        casa.immoments(**args) 
+        moment_0.write(image_out)
         dt.tag("immoments")
 
-        if sig_const is False:  
-            # get rid of temporary files
-            utils.remove(tmp)
-            utils.remove(mask)
-
+        if False:
         # get the flux
-        taskinit.ia.open(image_out)
-        st = taskinit.ia.statistics()
-        taskinit.ia.close()
-        dt.tag("statistics")
-        # report that flux, but there's no way to get the units from casa it seems
-        # ia.summary()['unit'] is usually 'Jy/beam.km/s' for ALMA
-        # imstat() does seem to know it.
-        if st.has_key('flux'):
-            rdata = [st['flux'][0],st['sum'][0]]
-            logging.info("Total flux: %f (sum=%f)" % (st['flux'],st['sum']))
-        else:
-            rdata = [st['sum'][0]]
-            logging.info("Sum: %f (beam parameters missing)" % (st['sum']))
-        logging.regression("CSM: %s" % str(rdata))
+            taskinit.ia.open(image_out)
+            st = taskinit.ia.statistics()
+            taskinit.ia.close()
+            dt.tag("statistics")
+            # report that flux, but there's no way to get the units from casa it seems
+            # ia.summary()['unit'] is usually 'Jy/beam.km/s' for ALMA
+            # imstat() does seem to know it.
+            if st.has_key('flux'):
+                rdata = [st['flux'][0],st['sum'][0]]
+                logging.info("Total flux: %f (sum=%f)" % (st['flux'],st['sum']))
+            else:
+                rdata = [st['sum'][0]]
+                logging.info("Sum: %f (beam parameters missing)" % (st['sum']))
+            logging.regression("CSM: %s" % str(rdata))
             
         # Create two output images for html and their thumbnails, too
-        implot = ImPlot(ptype=self._plot_type,pmode=self._plot_mode,abspath=self.dir())
-        implot.plotter(rasterfile=bdp_name,figname=bdp_name,colorwedge=True)
-        figname   = implot.getFigure(figno=implot.figno,relative=True)
-        thumbname = implot.getThumbnail(figno=implot.figno,relative=True)
+        if False:
+            implot = ImPlot(ptype=self._plot_type,pmode=self._plot_mode,abspath=self.dir())
+            implot.plotter(rasterfile=bdp_name,figname=bdp_name,colorwedge=True)
+            figname   = implot.getFigure(figno=implot.figno,relative=True)
+            thumbname = implot.getThumbnail(figno=implot.figno,relative=True)
+        else:
+            figname = None
+            thumbname = None
        
         dt.tag("implot")
 
@@ -341,11 +292,13 @@ class CubeSum_AT(AT):
 
         # 2. Create a histogram of the map data
         # get the data for a histogram
-        data = casautil.getdata(image_out,zeromask=True).compressed()
+        data = moment_0.value.ravel()
         dt.tag("getdata")
+        #   2D:  282.976u 3.364s 4:46.79 99.8%	0+0k 124904+3136io 598pf+0w
 
         # get the label for the x axis
-        bunit = casa.imhead(imagename=image_out, mode="get", hdkey="bunit")
+        #bunit = casa.imhead(imagename=image_out, mode="get", hdkey="bunit")
+        bunit = moment_0.unit
 
         # Make the histogram plot
         # Since we give abspath in the constructor, figname should be relative
@@ -361,12 +314,14 @@ class CubeSum_AT(AT):
         auxname = myplot.getFigure(figno=myplot.figno,relative=True)
         auxthumb = myplot.getThumbnail(figno=myplot.figno,relative=True)
 
-        images = {bt.CASA : bdp_name, bt.PNG : figname}
-        casaimage = Image(images    = images,
+        #images = {bt.FITS : bdp_name, bt.PNG : figname}
+        images = {bt.FITS : bdp_name}
+        fitsimage = Image(images    = images,
                                 auxiliary = auxname,
                                 auxtype   = auxtype,
-                                thumbnail = thumbname,
-                                thumbnailtype = thumbtype)
+                                # thumbnail = thumbname,
+                                # thumbnailtype = thumbtype,
+                          )
 
         if hasattr(b1,"line"):                      # SpwCube doesn't have Line
             line = deepcopy(getattr(b1,"line"))
@@ -375,11 +330,11 @@ class CubeSum_AT(AT):
         else:
             line = Line(name="Undetermined")    # fake a Line if there wasn't one
 
-        self.addoutput(Moment_BDP(xmlFile=bdp_name,moment=0,image=deepcopy(casaimage),line=line))
+        self.addoutput(Moment_BDP(xmlFile=bdp_name,moment=0,image=deepcopy(fitsimage),line=line))
         imcaption = "Integral (moment 0) of all emission in image cube"
         auxcaption = "Histogram of cube sum for image cube"
         taskargs = "numsigma=%.1f sigma=%g smooth=%s" % (numsigma, sigma, str(smooth))
-        self._summary["cubesum"] = SummaryEntry([figname,thumbname,imcaption,auxname,auxthumb,auxcaption,bdp_name,infile],"CubeSum_AT",self.id(True),taskargs)
+        #self._summary["cubesum"] = SummaryEntry([figname,thumbname,imcaption,auxname,auxthumb,auxcaption,bdp_name,infile],"CubeSum_AT",self.id(True),taskargs)
         
         dt.tag("done")
         dt.end()
