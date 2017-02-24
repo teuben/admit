@@ -5,20 +5,32 @@
 # REMOVE existing project directory before running script for the first time!
 #
 import admit
-import os
+import os, sys
 
 loglevel = 10            # 10=DEBUG, 15=TIMING 20=INFO 30=WARNING 40=ERROR 50=FATAL
 
 
+egc = 0
+if len(sys.argv) > 1:
+    egc = int(sys.argv[1])
+    ffile = 'EGC%04d.fits'  % egc
+    adir  = 'EGC%04d.admit' % egc
+else:
+    ffile = 'test6503.fits'
+    adir  = 'test6503.admit'
+    
+
+print('Working on ',ffile)
+
 # always start from clean slate
-os.system('rm -rf test6503.admit')
+os.system('rm -rf %s' % adir)
 
 # Master project.
-p = admit.Project('test6503.admit', loglevel=loglevel)
+p = admit.Project(adir, loglevel=loglevel)
 
 
 # Flow tasks.
-t0  = p.addtask(admit.Ingest_AT(alias='x', file='test6503.fits'))    
+t0  = p.addtask(admit.Ingest_AT(alias='x', file=ffile))    
 t1  = p.addtask(admit.CubeStats_AT(ppp=True), ['x'])
 t2  = p.addtask(admit.CubeSum_AT(numsigma=4.0, sigma=99.0), ['x', t1])
 
