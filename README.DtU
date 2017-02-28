@@ -1,0 +1,4 @@
+Packages needed for the ADMIT/rat demo at #DtU17
+================================================
+
+sudo apt install tcsh
