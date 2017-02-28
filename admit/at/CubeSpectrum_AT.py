@@ -131,7 +131,7 @@ class CubeSpectrum_AT(AT):
                 "xaxis"   : "",    # currently still ignored
         }
         AT.__init__(self,keys,keyval)
-        self._version       = "1.2.0"
+        self._version       = "1.2.1"
         self.set_bdp_in( [(Image_BDP,       1,bt.REQUIRED),     # 0: cube: SpwCube or LineCube allowed
                           (CubeStats_BDP,   1,bt.OPTIONAL),     # 1: stats, uses maxpos
                           (Moment_BDP,      1,bt.OPTIONAL),     # 2: map, uses the max in this image as pos=
@@ -198,8 +198,8 @@ class CubeSpectrum_AT(AT):
             fim = b1m.getimagefile(bt.FITS)
             print "CSM ",fim
             if True:
-                hdu1m = fits.open(self.dir(fin))                
-                data1m = hdu1m[0].data
+                hdu1m = fits.open(self.dir(fim))                
+                data1m = hdu1m[0].data.squeeze()
                 pos1,maxval = self.maxpos_im(data1m)              # compute maxpos, since it is not in bdp (yet)
                 logging.info('CubeSum::maxpos,val=%s,%f' % (str(pos1),maxval))
             else:
@@ -240,7 +240,7 @@ class CubeSpectrum_AT(AT):
         if len(pos) == 0:
             pos = self.getkey("pos")
 
-        # if still none, try the map center
+        # if still none, try the map center from the cube
         if len(pos) == 0:
             # @todo  this could result in a masked pixel and cause further havoc
             # @todo  could also take the reference pixel, but that could be outside image
@@ -258,6 +258,7 @@ class CubeSpectrum_AT(AT):
         # sadly the order is lost.
         pos = list(set(zip(pos[0::2],pos[1::2])))
         npos = len(pos)
+        print 'POS:',type(pos),pos
         
         dt.tag("open")
 
@@ -274,10 +275,11 @@ class CubeSpectrum_AT(AT):
             caption = "Spectrum"
             xpos = pos[i][0]
             ypos = pos[i][1]
+            print "POSI",i,type(xpos),xpos,ypos
             if type(xpos) != type(ypos):
                 print "POS:",xpos,ypos
                 raise Exception,"position pair not of the same type"
-            if type(xpos)==int:
+            if type(xpos)==int or type(xpos)==np.int64:
                 # for integers, boxes are allowed, even multiple
                 box = '%d,%d,%d,%d' % (xpos,ypos,xpos,ypos)
                 # convention for summary is (box)
@@ -297,6 +299,7 @@ class CubeSpectrum_AT(AT):
                     print cube
                     imval[i] = cube.unmasked_data[:,ypos,xpos].value
             elif type(xpos)==str:
+                # not implemented
                 region = 'pixels[%s,%s]' % (xpos,ypos)
                 caption = "Average Spectrum at %s" % region
                 imval[i] = cube.data[:,ypos,xpos]
