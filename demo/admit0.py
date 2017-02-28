@@ -34,12 +34,13 @@ t0  = p.addtask(admit.Ingest_AT(alias='x', file=ffile))
 t1  = p.addtask(admit.CubeStats_AT(ppp=True), ['x'])
 t2  = p.addtask(admit.CubeSum_AT(numsigma=4.0, sigma=99.0), ['x', t1])
 
-#   can't run this, since moment maps are 2D
-#t3  = p.addtask(admit.CubeSpectrum_AT(), ['x', t2])
+if False:
+    #   needs astropy.io.fits instead of RAT
+    t3  = p.addtask(admit.CubeSpectrum_AT(), ['x', t2])
+else:
+    t3  = p.addtask(admit.CubeSpectrum_AT(), ['x'])
 
 if False:
-
-
     t4  = p.addtask(admit.PVSlice_AT(clip=0.3, smooth=[10, 10], width=5), ['x', t2])
     t5  = p.addtask(admit.PVCorr_AT(), [t4, t1])
     t6  = p.addtask(admit.LineID_AT(csub=[0, 0], minchan=3, numsigma=4.0, references='/home/teuben/ADMIT/admit/etc/co_lines.list', vlsr=25.0), [t3, t1, t5])
