@@ -195,3 +195,9 @@ TIMING : CubeStats END [ 5.53455     5.54279399]
 TIMING : ADMITrun END [ 5.660818    5.72585487]
 REGRESSION : CST: 0.000594 1.246197
 
+
+
+EGC test data:
+=============
+
+ftp://ftp.astro.umd.edu/pub/teuben/
