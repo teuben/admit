@@ -176,11 +176,6 @@ class Ingest_AT(AT):
         "alias.im.bdp".   Note this is an exception from the usual rule, where
         alias= is used to create a dashed-prefix to an extension, e.g. "x.alias-y".
 
-      **Image_BDP**: 1
-        Output PB Map. If the input PB is a cube, the central channel (being representative
-        for the avarage PB across the spectrum window) is used.
-        New extension will be ".bp"
-
     Parameters
     ----------
 
@@ -228,10 +223,9 @@ class Ingest_AT(AT):
             # 'cbeam'   : 0.5,     # channel beam variation allowed in terms of pixel size to use median beam
         }
         AT.__init__(self,keys,keyval)
-        self._version = "1.2.0"
+        self._version = "1.2.1"
         self.set_bdp_in()                            # no input BDP
         self.set_bdp_out([(SpwCube_BDP, 1),          # one or two output BDPs
-                          (Image_BDP,   1),          # optional PB if there was an input
                         ])
 
     def summary(self):
