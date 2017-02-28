@@ -201,3 +201,5 @@ EGC test data:
 =============
 
 ftp://ftp.astro.umd.edu/pub/teuben/
+
+git checkout `git rev-list -n 1 --before="2016-09-28 23;30" master`
