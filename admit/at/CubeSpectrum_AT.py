@@ -197,9 +197,14 @@ class CubeSpectrum_AT(AT):
             b1m = self._bdp_in[2]
             fim = b1m.getimagefile(bt.FITS)
             print "CSM ",fim
-            cube1m = SpectralCube.read(self.dir(fim))
-            pos1,maxval = self.maxpos_im(cube1m)              # compute maxpos, since it is not in bdp (yet)
-            logging.info('CubeSum::maxpos,val=%s,%f' % (str(pos1),maxval))
+            if True:
+                hdu1m = fits.open(self.dir(fin))                
+                data1m = hdu1m[0].data
+                pos1,maxval = self.maxpos_im(data1m)              # compute maxpos, since it is not in bdp (yet)
+                logging.info('CubeSum::maxpos,val=%s,%f' % (str(pos1),maxval))
+            else:
+                pos1 = [130,130]
+                maxval = 0.3
             pos.append(pos1[0])
             pos.append(pos1[1])
             dt.tag("Moment-pos")
@@ -406,7 +411,8 @@ class CubeSpectrum_AT(AT):
         # @todo  review the use of the new casautil.getdata() style routines
         shape = data.shape
         argmax = data.argmax()
-        (ymax,xmax) = np.unravel_index(data.argmax(), data.shape())
+        print argmax,shape
+        (ymax,xmax) = np.unravel_index(argmax, shape)
         return ([xmax,ymax], data[ymax,xmax])
 
     def summary(self):

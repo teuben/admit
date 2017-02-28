@@ -34,7 +34,7 @@ t0  = p.addtask(admit.Ingest_AT(alias='x', file=ffile))
 t1  = p.addtask(admit.CubeStats_AT(ppp=True), ['x'])
 t2  = p.addtask(admit.CubeSum_AT(numsigma=4.0, sigma=99.0), ['x', t1])
 
-if False:
+if True:
     #   needs astropy.io.fits instead of RAT
     t3  = p.addtask(admit.CubeSpectrum_AT(), ['x', t2])
 else:
