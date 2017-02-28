@@ -27,6 +27,12 @@ import numpy as np
 import numpy.ma as ma
 import os
 
+# RAT
+import astropy.units as u
+import astropy.stats as astats
+from spectral_cube import SpectralCube
+from astropy.io import fits
+
 class CubeSpectrum_AT(AT):
     """ Define one (or more) spectra through a cube.
 
@@ -125,7 +131,7 @@ class CubeSpectrum_AT(AT):
                 "xaxis"   : "",    # currently still ignored
         }
         AT.__init__(self,keys,keyval)
-        self._version       = "1.0.3"
+        self._version       = "1.2.0"
         self.set_bdp_in( [(Image_BDP,       1,bt.REQUIRED),     # 0: cube: SpwCube or LineCube allowed
                           (CubeStats_BDP,   1,bt.OPTIONAL),     # 1: stats, uses maxpos
                           (Moment_BDP,      1,bt.OPTIONAL),     # 2: map, uses the max in this image as pos=
@@ -160,6 +166,9 @@ class CubeSpectrum_AT(AT):
             use_vel = True
         else:
             use_vel = False
+        cube = SpectralCube.read(self.dir(fin))
+        hdu = fits.open(self.dir(fin))
+        # print hdu[0].header['RESTFREQ']
 
         sources = self.getkey("sources")
         pos = []                     # blank it first, then try and grab it from the optional bdp_in's
@@ -187,7 +196,9 @@ class CubeSpectrum_AT(AT):
                 raise Exception,"bdp_in[2] not a Moment_BDP, should never happen"
             b1m = self._bdp_in[2]
             fim = b1m.getimagefile(bt.FITS)
-            pos1,maxval = self.maxpos_im(self.dir(fim))     # compute maxpos, since it is not in bdp (yet)
+            print "CSM ",fim
+            cube1m = SpectralCube.read(self.dir(fim))
+            pos1,maxval = self.maxpos_im(cube1m)              # compute maxpos, since it is not in bdp (yet)
             logging.info('CubeSum::maxpos,val=%s,%f' % (str(pos1),maxval))
             pos.append(pos1[0])
             pos.append(pos1[1])
@@ -228,9 +239,9 @@ class CubeSpectrum_AT(AT):
         if len(pos) == 0:
             # @todo  this could result in a masked pixel and cause further havoc
             # @todo  could also take the reference pixel, but that could be outside image
-            taskinit.ia.open(self.dir(fin))
-            s = taskinit.ia.summary()
-            pos = [int(s['shape'][0])/2, int(s['shape'][1])/2]
+            shape = cube.shape
+            print 'SHAPE',shape
+            pos = [int(shape[2])/2, int(shape[1])/2]
             logging.warning("No input positions supplied, map center choosen: %s" % str(pos))
             dt.tag("map-center")
 
@@ -278,34 +289,29 @@ class CubeSpectrum_AT(AT):
                     # also integrate over regions, imval will not (!!!)
                     region = 'centerbox[[%dpix,%dpix],[1pix,1pix]]' % (xpos,ypos)
                     caption = "Average Spectrum at %s" % region
-                    imval[i] = casa.imval(self.dir(fin),region=region)
+                    print cube
+                    imval[i] = cube.unmasked_data[:,ypos,xpos].value
             elif type(xpos)==str:
-                # this is tricky, to stay under 1 pixel , or you get a 2x2 back.
-                region = 'centerbox[[%s,%s],[1pix,1pix]]' % (xpos,ypos)
+                region = 'pixels[%s,%s]' % (xpos,ypos)
                 caption = "Average Spectrum at %s" % region
-                sd.extend([xpos,ypos,region])
-                imval[i] = casa.imval(self.dir(fin),region=region)
+                imval[i] = cube.data[:,ypos,xpos]
             else:
                 print "Data type: ",type(xpos)
                 raise Exception,"Data type for region not handled"
             dt.tag("imval")
 
-            flux  = imval[i]['data']
+            flux  = imval[i]
             if len(flux.shape) > 1:     # rare case if we step on a boundary between cells?
                 logging.warning("source %d has spectrum shape %s: averaging the spectra" % (i,repr(flux.shape)))
                 flux = np.average(flux,axis=0)
             logging.debug('minmax: %f %f %d' % (flux.min(),flux.max(),len(flux)))
             smax.append(flux.max())
             if i==0:                                              # for first point record few extra things
-                if len(imval[i]['coords'].shape) == 2:                   # normal case: 1 pixel
-                    freqs = imval[i]['coords'].transpose()[2]/1e9        # convert to GHz  @todo: input units ok?
-                elif len(imval[i]['coords'].shape) == 3:                 # rare case if > 1 point in imval()
-                    freqs = imval[i]['coords'][0].transpose()[2]/1e9     # convert to GHz  @todo: input units ok?
-                else:
-                    logging.fatal("bad shape %s in freq return from imval - SHOULD NEVER HAPPEN" % imval[i]['coords'].shape)
+                freqs =  cube.spectral_axis.to("GHz").value
                 chans = np.arange(len(freqs))                     # channels 0..nchans-1
-                unit  = imval[i]['unit']
-                restfreq = casa.imhead(self.dir(fin),mode="get",hdkey="restfreq")['value']/1e9    # in GHz
+                unit  = 'GHz'
+                restfreq = hdu[0].header['RESTFREQ']/1e9
+                print 'restfreq',restfreq
                 dt.tag("imhead")
                 vel   = (1-freqs/restfreq)*utils.c                #  @todo : use a function (and what about relativistic?)
 
@@ -333,9 +339,9 @@ class CubeSpectrum_AT(AT):
             sd.append(xlab)
             if type(xpos)==int:
                 # grab the RA/DEC... kludgy
-                h = casa.imstat(self.dir(fin),box=box)
-                ra  = h['blcf'].split(',')[0]
-                dec = h['blcf'].split(',')[1]
+                # h = casa.imstat(self.dir(fin),box=box)
+                ra  = 'hms'
+                dec = 'dms'
                 title = '%s %d @ %d,%d = %s,%s' % (bdp_name,i,xpos,ypos,ra,dec)
             else:
                 title = '%s %d @ %s,%s' % (bdp_name,i,xpos,ypos)       # or use box, once we allow non-points
@@ -379,8 +385,8 @@ class CubeSpectrum_AT(AT):
         dt.tag("summary")
         dt.end()
 
-    def maxpos_im(self, im):
-        """Find the position of the maximum in an image.
+    def maxpos_im(self, data):
+        """Find the position of the maximum in a 2d image.
         Helper function returns the position of the maximum value in the
         image as an [x,y] list in 0-based pixel coordinates.
 
@@ -398,20 +404,10 @@ class CubeSpectrum_AT(AT):
         # ia.getchunk is about 0.008, about 4x faster.
         # we're going to assume 2D images fit in memory and always use getchunk
         # @todo  review the use of the new casautil.getdata() style routines
-        if True:
-            taskinit.ia.open(im)
-            plane = taskinit.ia.getchunk(blc=[0,0,0,-1],trc=[-1,-1,-1,-1],dropdeg=True)
-            v = ma.masked_invalid(plane)
-            taskinit.ia.close()
-            mp = np.unravel_index(v.argmax(), v.shape)
-            maxval = v[mp[0],mp[1]]
-            maxpos = [int(mp[0]),int(mp[1])]
-        else:
-            imstat0 = casa.imstat(im)
-            maxpos = imstat0["maxpos"][:2].tolist()
-            maxval = imstat0["max"][0]
-        #print "MAXPOS_IM:::",maxpos,maxval,type(maxpos[0])
-        return (maxpos,maxval)
+        shape = data.shape
+        argmax = data.argmax()
+        (ymax,xmax) = np.unravel_index(data.argmax(), data.shape())
+        return ([xmax,ymax], data[ymax,xmax])
 
     def summary(self):
         """Returns the summary dictionary from the AT, for merging
