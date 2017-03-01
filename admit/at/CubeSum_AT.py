@@ -343,6 +343,14 @@ class CubeSum_AT(AT):
         auxcaption = "Histogram of cube sum for image cube"
         taskargs = "numsigma=%.1f sigma=%g smooth=%s" % (numsigma, sigma, str(smooth))
         #self._summary["cubesum"] = SummaryEntry([figname,thumbname,imcaption,auxname,auxthumb,auxcaption,bdp_name,infile],"CubeSum_AT",self.id(True),taskargs)
+
+        self._summary['fitsname'] = SummaryEntry("bogus placeholder")
+        for k in self._summary:
+            self._summary[k].setTaskname("CubeSum_AT")
+            self._summary[k].setTaskID(self.id(True))
+            self._summary[k].setTaskArgs(taskargs)
+        
+        
         
         dt.tag("done")
         dt.end()

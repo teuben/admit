@@ -223,7 +223,7 @@ class Ingest_AT(AT):
             # 'cbeam'   : 0.5,     # channel beam variation allowed in terms of pixel size to use median beam
         }
         AT.__init__(self,keys,keyval)
-        self._version = "1.2.1"
+        self._version = "1.2.2"
         self.set_bdp_in()                            # no input BDP
         self.set_bdp_out([(SpwCube_BDP, 1),          # one or two output BDPs
                         ])
@@ -329,6 +329,15 @@ class Ingest_AT(AT):
         dt.tag("start")
 
         # self._summarize(fitsfile, bdpfile, h, shape, taskargs)
+        #self._summary[k].setTaskArgs(taskargs)
+        self._summary['fitsname'] = SummaryEntry(fitsfile)
+        taskargs = "bugus=True"
+        for k in self._summary:
+            self._summary[k].setTaskname("Ingest_AT")
+            self._summary[k].setTaskID(self.id(True))
+            self._summary[k].setTaskArgs(taskargs)
+        
+        
 
         dt.tag("done")
         dt.end()
